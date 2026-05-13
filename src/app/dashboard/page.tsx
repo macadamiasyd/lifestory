@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { signOut } from "@/app/signout/actions";
 import type { Chapter } from "@/lib/types";
 
 const statusLabels: Record<string, string> = {
@@ -62,6 +63,14 @@ export default async function DashboardPage() {
           <p className="mt-1 text-stone-500">
             {completedCount} of {typedChapters.length} chapters have drafts
           </p>
+          <form action={signOut} className="mt-2">
+            <button
+              type="submit"
+              className="text-sm text-stone-400 hover:text-stone-600"
+            >
+              Sign out
+            </button>
+          </form>
         </div>
       </header>
 
