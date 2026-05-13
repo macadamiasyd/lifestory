@@ -1,7 +1,25 @@
-export default function Home() {
-  return (
-    <main className="flex min-h-screen items-center justify-center">
-      <h1 className="text-4xl font-bold">LifeStory</h1>
-    </main>
-  );
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+
+export default async function Home() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("intake_complete")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.intake_complete) {
+    redirect("/onboarding");
+  }
+
+  redirect("/dashboard");
 }
