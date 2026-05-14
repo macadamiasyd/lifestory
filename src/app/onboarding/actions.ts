@@ -96,7 +96,7 @@ export async function sendFirstSessionMessage(
   });
 
   const reply =
-    response.content[0].type === "text" ? response.content[0].text : "";
+    response.content[0]?.type === "text" ? response.content[0].text : "";
 
   // Save assistant message
   await supabase.from("messages").insert({
@@ -144,11 +144,18 @@ Propose 7 chronological chapters based on what you learned about this person. Pe
 7. Reflections / what matters most
 
 Adapt as needed — a younger person gets fewer chapters, someone without children skips that chapter, etc. Keep titles warm and personal, not generic.`,
-    messages,
+    messages: [
+      {
+        role: "user" as const,
+        content: messages
+          .map((m) => `${m.role === "user" ? "INTERVIEWEE" : "INTERVIEWER"}: ${m.content}`)
+          .join("\n\n"),
+      },
+    ],
   });
 
   const jsonText =
-    extractionResponse.content[0].type === "text"
+    extractionResponse.content[0]?.type === "text"
       ? extractionResponse.content[0].text
       : "{}";
 
@@ -231,7 +238,7 @@ Adapt as needed — a younger person gets fewer chapters, someone without childr
   });
 
   const summary =
-    summaryResponse.content[0].type === "text"
+    summaryResponse.content[0]?.type === "text"
       ? summaryResponse.content[0].text
       : "";
 
@@ -273,7 +280,7 @@ Adapt as needed — a younger person gets fewer chapters, someone without childr
     });
 
     const chapterContent =
-      chapterResponse.content[0].type === "text"
+      chapterResponse.content[0]?.type === "text"
         ? chapterResponse.content[0].text
         : "";
 
@@ -307,7 +314,7 @@ Adapt as needed — a younger person gets fewer chapters, someone without childr
   });
 
   const notesJson =
-    notesResponse.content[0].type === "text"
+    notesResponse.content[0]?.type === "text"
       ? notesResponse.content[0].text
       : "{}";
 

@@ -103,7 +103,7 @@ export async function generateChapter(chapterId: string): Promise<string> {
   });
 
   const content =
-    response.content[0].type === "text" ? response.content[0].text : "";
+    response.content[0]?.type === "text" ? response.content[0].text : "";
 
   await supabase
     .from("chapters")

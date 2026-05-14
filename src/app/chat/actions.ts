@@ -184,7 +184,7 @@ export async function sendChatMessage(
   });
 
   const reply =
-    response.content[0].type === "text" ? response.content[0].text : "";
+    response.content[0]?.type === "text" ? response.content[0].text : "";
 
   // Save assistant message to DB
   await supabase.from("messages").insert({
@@ -224,7 +224,7 @@ Be concise but capture the important details that a future session or writing en
   });
 
   const summary =
-    summaryResponse.content[0].type === "text"
+    summaryResponse.content[0]?.type === "text"
       ? summaryResponse.content[0].text
       : "";
 
@@ -263,7 +263,7 @@ Be concise but capture the important details that a future session or writing en
   });
 
   const notesJson =
-    notesResponse.content[0].type === "text"
+    notesResponse.content[0]?.type === "text"
       ? notesResponse.content[0].text
       : "{}";
 
