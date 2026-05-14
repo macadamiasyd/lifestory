@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getSettings, saveSettings } from "./actions";
+import { getSettings, saveSettings, regenerateAllDrafts } from "./actions";
 import type { UserSettings } from "@/lib/types";
 
 type Props = {
@@ -21,6 +21,10 @@ export default function SettingsPanel({ open, onClose }: Props) {
   const [audience, setAudience] = useState("");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [draftCount, setDraftCount] = useState(0);
+  const [showRegenerate, setShowRegenerate] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+  const [regenerateResult, setRegenerateResult] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) loadSettings();
@@ -28,6 +32,8 @@ export default function SettingsPanel({ open, onClose }: Props) {
 
   async function loadSettings() {
     setLoading(true);
+    setShowRegenerate(false);
+    setRegenerateResult(null);
     try {
       const data = await getSettings();
       setSettings(data.settings);
@@ -43,12 +49,34 @@ export default function SettingsPanel({ open, onClose }: Props) {
   async function handleSave() {
     setSaving(true);
     try {
-      await saveSettings(settings, bookTitle, audience);
-      onClose();
+      const result = await saveSettings(settings, bookTitle, audience);
+      if (result.draftCount > 0) {
+        setDraftCount(result.draftCount);
+        setShowRegenerate(true);
+      } else {
+        onClose();
+      }
     } catch (err) {
       console.error(err);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleRegenerate() {
+    setRegenerating(true);
+    setRegenerateResult(null);
+    try {
+      const result = await regenerateAllDrafts();
+      setRegenerateResult(
+        `Regenerated ${result.regenerated} chapter${result.regenerated !== 1 ? "s" : ""}`
+      );
+      setTimeout(() => onClose(), 2000);
+    } catch (err) {
+      console.error(err);
+      setRegenerateResult("Something went wrong");
+    } finally {
+      setRegenerating(false);
     }
   }
 
@@ -237,13 +265,42 @@ export default function SettingsPanel({ open, onClose }: Props) {
               </div>
 
               {/* Save */}
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="w-full rounded-lg bg-amber-600 px-4 py-3 font-medium text-white hover:bg-amber-700 transition-colors disabled:opacity-50"
-              >
-                {saving ? "Saving..." : "Save settings"}
-              </button>
+              {showRegenerate ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
+                  <p className="text-sm text-stone-700">
+                    Settings saved. You have {draftCount} existing chapter draft{draftCount !== 1 ? "s" : ""}.
+                    Would you like to regenerate {draftCount !== 1 ? "them" : "it"} with your new settings?
+                  </p>
+                  {regenerateResult ? (
+                    <p className="text-sm font-medium text-amber-700">{regenerateResult}</p>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleRegenerate}
+                        disabled={regenerating}
+                        className="flex-1 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 transition-colors disabled:opacity-50"
+                      >
+                        {regenerating ? "Regenerating..." : "Regenerate drafts"}
+                      </button>
+                      <button
+                        onClick={onClose}
+                        disabled={regenerating}
+                        className="flex-1 rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors disabled:opacity-50"
+                      >
+                        Skip
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="w-full rounded-lg bg-amber-600 px-4 py-3 font-medium text-white hover:bg-amber-700 transition-colors disabled:opacity-50"
+                >
+                  {saving ? "Saving..." : "Save settings"}
+                </button>
+              )}
             </div>
           )}
         </div>
