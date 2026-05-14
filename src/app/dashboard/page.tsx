@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/signout/actions";
 import type { Chapter } from "@/lib/types";
+import SettingsButton from "./settings-button";
 
 const statusLabels: Record<string, string> = {
   not_started: "Not started",
@@ -58,19 +59,22 @@ export default async function DashboardPage() {
   return (
     <main className="min-h-screen bg-stone-50">
       <header className="border-b border-stone-200 bg-white px-6 py-6">
-        <div className="mx-auto max-w-3xl">
-          <h1 className="text-3xl font-bold text-stone-900">{book.title}</h1>
-          <p className="mt-1 text-stone-500">
-            {completedCount} of {typedChapters.length} chapters have drafts
-          </p>
-          <form action={signOut} className="mt-2">
-            <button
-              type="submit"
-              className="text-sm text-stone-400 hover:text-stone-600"
-            >
-              Sign out
-            </button>
-          </form>
+        <div className="mx-auto flex max-w-3xl items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-stone-900">{book.title}</h1>
+            <p className="mt-1 text-stone-500">
+              {completedCount} of {typedChapters.length} chapters have drafts
+            </p>
+            <form action={signOut} className="mt-2">
+              <button
+                type="submit"
+                className="text-sm text-stone-400 hover:text-stone-600"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
+          <SettingsButton />
         </div>
       </header>
 
