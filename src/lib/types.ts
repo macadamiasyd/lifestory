@@ -1,3 +1,25 @@
+export type UserSettings = {
+  tone: "auto" | "warm and reflective" | "casual and humorous" | "dignified and formal";
+  structure_type: "chronological" | "thematic" | "milestone";
+  point_of_view: "first_person" | "third_person";
+  chapter_length: "short" | "medium" | "long";
+  topics_to_avoid: string;
+};
+
+export const DEFAULT_SETTINGS: UserSettings = {
+  tone: "auto",
+  structure_type: "chronological",
+  point_of_view: "first_person",
+  chapter_length: "medium",
+  topics_to_avoid: "",
+};
+
+export const CHAPTER_LENGTH_WORDS: Record<UserSettings["chapter_length"], number> = {
+  short: 1000,
+  medium: 2500,
+  long: 4000,
+};
+
 export type Profile = {
   id: string;
   name: string;
@@ -9,6 +31,7 @@ export type Profile = {
   topics_to_avoid: string | null;
   intake_complete: boolean;
   intake_data: Record<string, unknown>;
+  settings: UserSettings;
   created_at: string;
   updated_at: string;
 };
