@@ -2,7 +2,11 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { sendIntakeMessage, completeIntake } from "./actions";
+import {
+  getOrCreateFirstSession,
+  sendFirstSessionMessage,
+  wrapUpFirstSession,
+} from "./actions";
 
 type ChatMessage = {
   role: "user" | "assistant";
@@ -13,8 +17,9 @@ export default function OnboardingPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [started, setStarted] = useState(false);
-  const [completing, setCompleting] = useState(false);
+  const [initializing, setInitializing] = useState(true);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [wrappingUp, setWrappingUp] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const router = useRouter();
@@ -24,28 +29,40 @@ export default function OnboardingPage() {
   }, [messages]);
 
   useEffect(() => {
-    if (!loading) inputRef.current?.focus();
-  }, [loading]);
+    if (!loading && !initializing) inputRef.current?.focus();
+  }, [loading, initializing]);
 
-  async function startConversation() {
-    setStarted(true);
-    setLoading(true);
+  useEffect(() => {
+    initSession();
+  }, []);
+
+  async function initSession() {
     try {
-      const { reply } = await sendIntakeMessage([], "Hello, I'd like to start telling my life story.");
-      setMessages([
-        { role: "user", content: "Hello, I'd like to start telling my life story." },
-        { role: "assistant", content: reply },
-      ]);
+      const { sessionId: sid, existingMessages } =
+        await getOrCreateFirstSession();
+      setSessionId(sid);
+
+      if (existingMessages.length > 0) {
+        setMessages(existingMessages);
+      } else {
+        // Get the AI's opening greeting
+        const reply = await sendFirstSessionMessage(
+          sid,
+          [],
+          "[System: This is the very first interaction. Greet the user warmly and ask what you should call them.]"
+        );
+        setMessages([{ role: "assistant", content: reply }]);
+      }
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
+      setInitializing(false);
     }
   }
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
-    if (!input.trim() || loading) return;
+    if (!input.trim() || loading || !sessionId) return;
 
     const userMessage = input.trim();
     setInput("");
@@ -58,26 +75,28 @@ export default function OnboardingPage() {
     setLoading(true);
 
     try {
-      const { reply, intakeComplete } = await sendIntakeMessage(
+      const reply = await sendFirstSessionMessage(
+        sessionId,
         messages,
         userMessage
       );
-
-      const finalMessages: ChatMessage[] = [
-        ...updatedMessages,
-        { role: "assistant", content: reply },
-      ];
-      setMessages(finalMessages);
-
-      if (intakeComplete) {
-        setCompleting(true);
-        await completeIntake(finalMessages);
-        router.push("/chapters");
-      }
+      setMessages([...updatedMessages, { role: "assistant", content: reply }]);
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleWrapUp() {
+    if (!sessionId || wrappingUp) return;
+    setWrappingUp(true);
+    try {
+      await wrapUpFirstSession(sessionId, messages);
+      router.push("/dashboard");
+    } catch (err) {
+      console.error(err);
+      setWrappingUp(false);
     }
   }
 
@@ -88,24 +107,12 @@ export default function OnboardingPage() {
     }
   }
 
-  if (!started) {
+  if (initializing) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-stone-50">
-        <div className="max-w-lg text-center">
-          <h1 className="mb-4 text-4xl font-bold text-stone-900">
-            Welcome to LifeStory
-          </h1>
-          <p className="mb-8 text-lg text-stone-600">
-            We&apos;re going to have a short conversation to get to know you and
-            understand what kind of story you&apos;d like to tell. It&apos;ll take about
-            5-10 minutes.
-          </p>
-          <button
-            onClick={startConversation}
-            className="rounded-lg bg-amber-600 px-8 py-4 text-lg font-medium text-white hover:bg-amber-700 transition-colors"
-          >
-            Let&apos;s begin
-          </button>
+        <div className="text-center">
+          <h1 className="mb-2 text-2xl font-bold text-stone-900">LifeStory</h1>
+          <p className="text-stone-500">Getting ready...</p>
         </div>
       </main>
     );
@@ -113,11 +120,22 @@ export default function OnboardingPage() {
 
   return (
     <main className="flex min-h-screen flex-col bg-stone-50">
-      <header className="border-b border-stone-200 bg-white px-6 py-4">
-        <h1 className="text-xl font-bold text-stone-900">Getting to know you</h1>
-        <p className="text-sm text-stone-500">
-          Tell us a bit about yourself so we can shape your story
-        </p>
+      <header className="flex items-center justify-between border-b border-stone-200 bg-white px-6 py-4">
+        <div>
+          <h1 className="text-xl font-bold text-stone-900">LifeStory</h1>
+          <p className="text-sm text-stone-500">
+            Your life, in your words
+          </p>
+        </div>
+        {messages.length >= 6 && (
+          <button
+            onClick={handleWrapUp}
+            disabled={wrappingUp}
+            className="rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors disabled:opacity-50"
+          >
+            {wrappingUp ? "Setting up your book..." : "Wrap up for today"}
+          </button>
+        )}
       </header>
 
       <div className="flex-1 overflow-y-auto px-4 py-6">
@@ -153,10 +171,10 @@ export default function OnboardingPage() {
         </div>
       </div>
 
-      {completing ? (
+      {wrappingUp ? (
         <div className="border-t border-stone-200 bg-white px-6 py-4 text-center">
           <p className="text-stone-600">
-            Setting up your story structure...
+            Setting up your story structure and writing your first chapter draft...
           </p>
         </div>
       ) : (
@@ -170,7 +188,7 @@ export default function OnboardingPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Type your response..."
+              placeholder="Share your story..."
               rows={1}
               disabled={loading}
               className="flex-1 resize-none rounded-xl border border-stone-300 px-4 py-3 text-stone-900 placeholder-stone-400 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20 disabled:opacity-50"

@@ -159,7 +159,7 @@ export async function sendChatMessage(
     chapterTitle: chapter?.title,
     chapterDescription: chapter?.description || undefined,
     sessionSummary: sessionSummary || undefined,
-    isIntake: false,
+    isFirstSession: false,
   });
 
   const allMessages = [
