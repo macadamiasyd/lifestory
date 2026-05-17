@@ -124,8 +124,13 @@ export async function wrapUpFirstSession(
   const extractionResponse = await client.messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 2048,
-    system: `Extract structured information from this memoir interview conversation. Return ONLY valid JSON:
+    system: `Extract structured information from this memoir interview conversation. Return ONLY valid JSON.
+
+First, determine if this is an autobiography (the person telling their own story) or a biography (the person telling someone else's story).
+
+FOR AUTOBIOGRAPHY, return:
 {
+  "book_type": "autobiography",
   "name": "string (the interviewee's name)",
   "age": number or null,
   "location": "string or null (where they grew up or live)",
@@ -134,16 +139,30 @@ export async function wrapUpFirstSession(
     { "title": "string", "description": "brief description personalised to their story" }
   ]
 }
-Propose 7 chronological chapters based on what you learned about this person. Personalise the titles based on actual details from the conversation — use real names, places, and events they mentioned. Structure:
-1. Early life / childhood
-2. Growing up / school years
-3. Young adulthood / leaving home
-4. Relationships / partner
-5. Family / children (if applicable)
-6. Career / work life
-7. Reflections / what matters most
 
-Adapt as needed — a younger person gets fewer chapters, someone without children skips that chapter, etc. Keep titles warm and personal, not generic.`,
+FOR BIOGRAPHY, return:
+{
+  "book_type": "biography",
+  "name": "string (the biographer's name — the person being interviewed)",
+  "age": null,
+  "location": null,
+  "audience": "string (who the book is for)",
+  "biography_meta": {
+    "subject_name": "string (name of the person being written about)",
+    "subject_relationship": "string (biographer's relationship to subject)",
+    "subject_status": "living" or "deceased" or "unknown",
+    "subject_era": "string (approximate period, e.g. '1970s-1990s')",
+    "biographer_role": "string (how the biographer relates — 'band archivist', 'daughter', etc.)"
+  },
+  "proposed_chapters": [
+    { "title": "string", "description": "brief description personalised to subject's story" }
+  ]
+}
+
+For AUTOBIOGRAPHY chapters, propose 7 chronological chapters based on what you learned. Personalise titles.
+For BIOGRAPHY chapters, propose 7 chapters about the SUBJECT's life based on what the biographer shared. Personalise titles using the subject's name, places, and events mentioned.
+
+Keep titles warm and personal, not generic.`,
     messages: [
       {
         role: "user" as const,
@@ -188,11 +207,19 @@ Adapt as needed — a younger person gets fewer chapters, someone without childr
     .single();
 
   // 3. Create book
+  const bookType = intakeData.book_type || "autobiography";
+  const biographyMeta = intakeData.biography_meta || null;
+  const bookTitle = bookType === "biography"
+    ? `${biographyMeta?.subject_name || "Unknown"}: A Biography`
+    : `${intakeData.name || "My"}'s Story`;
+
   const { data: book } = await supabase
     .from("books")
     .insert({
       user_id: user.id,
-      title: `${intakeData.name || "My"}'s Story`,
+      title: bookTitle,
+      book_type: bookType,
+      biography_meta: biographyMeta,
     })
     .select()
     .single();
