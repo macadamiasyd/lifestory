@@ -292,6 +292,8 @@ Keep titles warm and personal, not generic.`,
       chapterTitle: firstChapter?.title || "The Early Days",
       chapterDescription: firstChapter?.description,
       conversationTranscript: transcript,
+      bookType: bookType,
+      biographyMeta: biographyMeta,
     });
 
     const chapterResponse = await client.messages.create({
@@ -301,7 +303,9 @@ Keep titles warm and personal, not generic.`,
       messages: [
         {
           role: "user",
-          content: "Please write this chapter based on the interview transcript.",
+          content: bookType === "biography"
+              ? "Please write this biography chapter based on the interview transcript."
+              : "Please write this chapter based on the interview transcript.",
         },
       ],
     });
