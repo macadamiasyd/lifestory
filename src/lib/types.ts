@@ -42,6 +42,8 @@ export type Book = {
   title: string;
   chapter_order: string[];
   status: "in_progress" | "complete";
+  book_type: "autobiography" | "biography";
+  biography_meta: BiographyMeta | null;
   created_at: string;
   updated_at: string;
 };
@@ -86,4 +88,32 @@ export type ChapterNote = {
   key_events: string[];
   summary: string | null;
   created_at: string;
+};
+
+export type BiographyMeta = {
+  subject_name: string;
+  subject_relationship: string;
+  subject_status: "living" | "deceased" | "unknown";
+  subject_era: string;
+  biographer_role: string;
+};
+
+export type SourceMaterial = {
+  id: string;
+  book_id: string;
+  title: string;
+  content: string;
+  source_type: "interview" | "article" | "notes" | "correspondence" | "general";
+  created_at: string;
+  updated_at: string;
+};
+
+export type Quote = {
+  speaker: "subject" | "biographer" | "source";
+  text: string;
+  context: string;
+  source_session_id?: string;
+  source_material_id?: string;
+  source_title?: string;
+  firsthand?: boolean;
 };
