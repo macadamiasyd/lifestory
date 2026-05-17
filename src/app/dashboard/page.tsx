@@ -45,6 +45,9 @@ export default async function DashboardPage() {
 
   if (!book) redirect("/onboarding");
 
+  const isBiography = book.book_type === "biography";
+  const biographyMeta = book.biography_meta as { subject_name?: string } | null;
+
   const { data: chapters } = await supabase
     .from("chapters")
     .select("*")
@@ -62,6 +65,11 @@ export default async function DashboardPage() {
         <div className="mx-auto flex max-w-3xl items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold text-stone-900">{book.title}</h1>
+            {isBiography && biographyMeta?.subject_name && (
+              <p className="text-sm text-amber-700 font-medium mt-0.5">
+                Biography of {biographyMeta.subject_name}
+              </p>
+            )}
             <p className="mt-1 text-stone-500">
               {completedCount} of {typedChapters.length} chapters have drafts
             </p>
@@ -125,12 +133,22 @@ export default async function DashboardPage() {
         </div>
 
         <div className="mt-8 flex justify-between">
-          <Link
-            href="/chapters"
-            className="text-sm text-stone-500 hover:text-stone-700"
-          >
-            Edit chapter plan
-          </Link>
+          <div className="flex gap-4">
+            <Link
+              href="/chapters"
+              className="text-sm text-stone-500 hover:text-stone-700"
+            >
+              Edit chapter plan
+            </Link>
+            {isBiography && (
+              <Link
+                href="/sources"
+                className="text-sm text-amber-600 hover:text-amber-700 font-medium"
+              >
+                Source material
+              </Link>
+            )}
+          </div>
           <Link
             href="/preview"
             className="rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors"
