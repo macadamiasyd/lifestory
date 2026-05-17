@@ -25,6 +25,9 @@ export default function SettingsPanel({ open, onClose }: Props) {
   const [showRegenerate, setShowRegenerate] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [regenerateResult, setRegenerateResult] = useState<string | null>(null);
+  const [bookType, setBookType] = useState<"autobiography" | "biography">("autobiography");
+  const [subjectName, setSubjectName] = useState("");
+  const [subjectRelationship, setSubjectRelationship] = useState("");
 
   useEffect(() => {
     if (open) loadSettings();
@@ -39,6 +42,9 @@ export default function SettingsPanel({ open, onClose }: Props) {
       setSettings(data.settings);
       setBookTitle(data.bookTitle);
       setAudience(data.audience);
+      setBookType(data.bookType);
+      setSubjectName(data.biographyMeta?.subject_name || "");
+      setSubjectRelationship(data.biographyMeta?.subject_relationship || "");
     } catch (err) {
       console.error(err);
     } finally {
@@ -49,7 +55,10 @@ export default function SettingsPanel({ open, onClose }: Props) {
   async function handleSave() {
     setSaving(true);
     try {
-      const result = await saveSettings(settings, bookTitle, audience);
+      const bioMeta = bookType === "biography"
+        ? { subject_name: subjectName, subject_relationship: subjectRelationship }
+        : null;
+      const result = await saveSettings(settings, bookTitle, audience, bioMeta);
       if (result.draftCount > 0) {
         setDraftCount(result.draftCount);
         setShowRegenerate(true);
@@ -137,6 +146,34 @@ export default function SettingsPanel({ open, onClose }: Props) {
                   className="w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 placeholder-stone-400 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                 />
               </div>
+
+              {/* Biography-specific fields */}
+              {bookType === "biography" && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-1">
+                      Subject name
+                    </label>
+                    <input
+                      value={subjectName}
+                      onChange={(e) => setSubjectName(e.target.value)}
+                      placeholder="Who is this biography about?"
+                      className="w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 placeholder-stone-400 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-1">
+                      Your relationship to the subject
+                    </label>
+                    <input
+                      value={subjectRelationship}
+                      onChange={(e) => setSubjectRelationship(e.target.value)}
+                      placeholder="e.g. band manager, daughter, researcher"
+                      className="w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 placeholder-stone-400 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                    />
+                  </div>
+                </>
+              )}
 
               {/* Tone */}
               <div>

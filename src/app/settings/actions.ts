@@ -15,6 +15,8 @@ export async function getSettings(): Promise<{
   settings: UserSettings;
   bookTitle: string;
   audience: string;
+  bookType: "autobiography" | "biography";
+  biographyMeta: { subject_name: string; subject_relationship: string } | null;
 }> {
   const supabase = await createClient();
   const {
@@ -30,7 +32,7 @@ export async function getSettings(): Promise<{
 
   const { data: book } = await supabase
     .from("books")
-    .select("title")
+    .select("title, book_type, biography_meta")
     .eq("user_id", user.id)
     .single();
 
@@ -38,13 +40,16 @@ export async function getSettings(): Promise<{
     settings: { ...defaults, ...(profile?.settings || {}) } as UserSettings,
     bookTitle: book?.title || "",
     audience: profile?.audience || "",
+    bookType: book?.book_type || "autobiography",
+    biographyMeta: book?.biography_meta || null,
   };
 }
 
 export async function saveSettings(
   settings: UserSettings,
   bookTitle: string,
-  audience: string
+  audience: string,
+  biographyMeta?: { subject_name: string; subject_relationship: string } | null
 ): Promise<{ draftCount: number }> {
   const supabase = await createClient();
   const {
@@ -57,10 +62,14 @@ export async function saveSettings(
     .update({ settings, audience })
     .eq("id", user.id);
 
-  if (bookTitle) {
+  const bookUpdate: Record<string, unknown> = {};
+  if (bookTitle) bookUpdate.title = bookTitle;
+  if (biographyMeta) bookUpdate.biography_meta = biographyMeta;
+
+  if (Object.keys(bookUpdate).length > 0) {
     await supabase
       .from("books")
-      .update({ title: bookTitle })
+      .update(bookUpdate)
       .eq("user_id", user.id);
   }
 
