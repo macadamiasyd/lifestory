@@ -53,6 +53,13 @@ export async function generateChapter(chapterId: string): Promise<string> {
 
   if (!chapter) throw new Error("Chapter not found");
 
+  // Get book for type and biography meta
+  const { data: book } = await supabase
+    .from("books")
+    .select("book_type, biography_meta")
+    .eq("id", chapter.book_id)
+    .single();
+
   const { data: sessions } = await supabase
     .from("sessions")
     .select("id")
@@ -79,12 +86,25 @@ export async function generateChapter(chapterId: string): Promise<string> {
     )
     .join("\n\n");
 
+  // Load source materials for biography mode
+  let sourceMaterials: any[] = [];
+  if (book?.book_type === "biography") {
+    const { data: sources } = await supabase
+      .from("source_materials")
+      .select("*")
+      .eq("book_id", chapter.book_id);
+    sourceMaterials = sources || [];
+  }
+
   const writingPrompt = buildWritingPrompt({
     profile: profile as Profile,
     chapterTitle: chapter.title,
     chapterDescription: chapter.description || undefined,
     conversationTranscript: transcript,
     existingContent: chapter.content || undefined,
+    bookType: book?.book_type || "autobiography",
+    biographyMeta: book?.biography_meta || null,
+    sourceMaterials,
   });
 
   const client = getAnthropicClient();

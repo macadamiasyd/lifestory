@@ -137,8 +137,15 @@ export async function sendChatMessage(
 
   const { data: chapter } = await supabase
     .from("chapters")
-    .select("title, description")
+    .select("title, description, book_id")
     .eq("id", chapterId)
+    .single();
+
+  // Get book for type and biography meta
+  const { data: book } = await supabase
+    .from("books")
+    .select("book_type, biography_meta")
+    .eq("id", chapter?.book_id)
     .single();
 
   const { data: previousSessions } = await supabase
@@ -154,12 +161,25 @@ export async function sendChatMessage(
     .filter(Boolean)
     .join("\n\n");
 
+  // Load source materials for biography mode
+  let sourceMaterials: any[] = [];
+  if (book?.book_type === "biography" && chapter?.book_id) {
+    const { data: sources } = await supabase
+      .from("source_materials")
+      .select("*")
+      .eq("book_id", chapter.book_id);
+    sourceMaterials = sources || [];
+  }
+
   const systemPrompt = buildConversationPrompt({
     profile: profile as Profile,
     chapterTitle: chapter?.title,
     chapterDescription: chapter?.description || undefined,
     sessionSummary: sessionSummary || undefined,
     isFirstSession: false,
+    bookType: book?.book_type || "autobiography",
+    biographyMeta: book?.biography_meta || null,
+    sourceMaterials,
   });
 
   const allMessages = [
